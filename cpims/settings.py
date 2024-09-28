@@ -31,6 +31,7 @@ cpims_db_user = env('CPIMS_DBUSER')
 
 DEBUG = env('CPIMS_DEBUG')
 
+
 INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.admin',
@@ -42,8 +43,8 @@ INSTALLED_APPS = [
     'cpovc_main',
     'cpovc_auth',
     'cpovc_registry',
-    'cpovc_forms',
-    'cpovc_gis',
+    'cpovc_forms',  # Updated
+    'cpovc_gis',  # Updated
     'cpovc_access',
     'cpovc_settings',
     'crispy_forms',
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
 ]
+
 
 
 MIDDLEWARE = [
@@ -111,18 +113,20 @@ WSGI_APPLICATION = 'cpims.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': cpims_db_instance,
-        'USER': cpims_db_user,
+        'NAME':  cpims_db_instance,
+        'USER':  cpims_db_user,
         'PASSWORD': cpims_db_pass,
         'HOST': cpims_db_host,
-        'PORT': cpims_db_port, },
+        'PORT': cpims_db_port, 
+        },
     'reporting': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': cpims_db_instance,
         'USER': cpims_db_user,
         'PASSWORD': cpims_db_pass,
         'HOST': '41.89.94.104',
-        'PORT': cpims_db_port, }
+        'PORT': cpims_db_port, 
+        }
 }
 
 LANGUAGE_CODE = 'en-us'

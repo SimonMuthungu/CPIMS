@@ -38,6 +38,10 @@ def public_dashboard_reg(request):
     except Exception as e:
         print(('dashboard error - %s' % (str(e))))
         raise e
+    
+
+def api_test_page(request):
+    return render(request, 'api_input.html')
 
 
 def public_dashboard_hivstat(request):

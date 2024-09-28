@@ -47,6 +47,10 @@ urlpatterns = [
     path('public_dashboard/served/', views.public_dashboard_served, name='public_dashboard_served'),
     path('public_dash/', views.public_dash, name='public_dash'),
     path('public_dashboard/', views.public_dashboard_reg, name='public_dashboard_reg'),
+
+    # test dashboard
+    path('apitest/', views.api_test_page, name='api_test_page'),
+
     # APIs
     path('get_locality_data/', views.get_locality_data, name='get_locality_data'),
     re_path(r'^hiv_stats_pub_data/(?P<org_level>\w+)/(?P<area_id>.*)/', views.get_pub_data, name='get_pub_data'),
