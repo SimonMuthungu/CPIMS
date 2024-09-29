@@ -14,6 +14,8 @@ from cpovc_main.functions import get_dict
 from cpovc_access.functions import access_request
 from django.contrib.auth.decorators import login_required
 from zeep.helpers import serialize_object
+from zeep.exceptions import Fault
+import requests
 
 
 mc = memcache.Client(['127.0.0.1:11211'], debug=0)
@@ -47,72 +49,43 @@ def verify_user_by_iprs(request):
         username = request.POST.get('search_name')
         password = request.POST.get('search_criteria')
 
-        print(f'\nusername submitter for login:{username}\nAnd pswd: {password}')
-
-        import json
-        from zeep import Client
-        from zeep.exceptions import Fault
-        from zeep.helpers import serialize_object
-
         # WSDL service URL
-        wsdl_url = 'https://dev.cpims.net/IPRSServerwcf?wsdl'
+        BASE_URL = 'https://ovc.childprotection.uonbi.ac.ke/api/'
+        IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/token/iprs/1/'
+        AUTH_URL = f'{BASE_URL}/token/'
 
-
-        def check_wsdl_connection():
-
-            try:
-                client = Client(wsdl=wsdl_url)
-                print("Connection to WSDL service successful!")
-                return client
-            except Exception as e:
-                print(f"Failed to connect to WSDL service: {e}")
-                # return None
-            
-        try:
-            client = check_wsdl_connection()
-        except Exception as e:
-            print('Exception occured while trying to create client')
-            raise ImportWarning
         
         # Logic to verify user credentials (api check)
-        def perform_login(client):
+        def perform_login():
 
-            from zeep.exceptions import Fault
-
-
-            # Create login payload
+            # Input payload
             login_payload = {
-                'log': username,
-                'pass': password
+                'Username': 'testhealthit',
+                'Password': 'T3st@987654321',
             }
+
 
             try:
                 # login credentials
-                response = client.service.Login(**login_payload)  # Modify the method name as per actual WSDL
-                print(f'Im likely the culprit, heres what I am: {response}')
-                response_dict = serialize_object(response)
+                response = requests.post(AUTH_URL, data=login_payload)
 
-                if response_dict.get('LoginSuccess', False):
-                    print("Login successful!")
-
-                    # creating a session with the returned token
-                    session_token = response_dict.get('SessionToken')
-                    request.session['session_token'] = session_token
-
-                    return redirect('passport_page')
+                if response.status_code == 200:
+                    print(f'\nAuth response status 200: {response.json()}')
+                    token = response.json().get('access')
+                    response_dict = response.json()  # Parse the JSON response
+                    
+                    
+                    if token:
+                        return token
+                    else: 
+                        raise Exception("Not found")
                 else:
-                    print("Invalid credentials, please try again.")
-                    return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+                    raise Exception(f"authentication failed: {response.status_code} - {response.text}")
 
-            except Fault as fault:
-                print(f"SOAP Fault during login: {fault}")
-                return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
-
-            except Exception as e:
-                print(f"An error occurred: {e}")
-                return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+            except:
+                return f"authentication failed: {response.status_code} - {response.text}"
             
-        perform_login(client)
+        perform_login()
  
     return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
 
@@ -126,69 +99,88 @@ def passport_page(request):
         birth_certificate = request.POST.get('birth_certificate', '')
         birth_certificate_serial = request.POST.get('birth_certificate_serial', '')
 
-        import json
-        from zeep import Client
-        from zeep.exceptions import Fault
-        from zeep.helpers import serialize_object
 
         # WSDL service URL
-        wsdl_url = 'https://dev.cpims.net/IPRSServerwcf?wsdl'
+        IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/token/iprs/2/'
 
+        def get_data_by_id(token, fakedata=True):
 
-        def check_wsdl_connection():
-
-            try:
-                client = Client(wsdl=wsdl_url)
-                print("Connection to WSDL service successful!")
-                return client
-            except Exception as e:
-                print(f"Failed to connect to WSDL service: {e}")
-                return None
-            
-        try:
-            client = check_wsdl_connection()
-        except Exception as e:
-            print(f'Exception occured while trying to create client:\n{e}')
-            raise ImportWarning
-        
-
-        def get_data_by_id(client, token, fakedata=True):
+            import json
                     
             if fakedata:
                 return JsonResponse({'response_dict': 'data 1'}, json_dumps_params={'indent': 4}) 
 
             input_payload = {
                 'id_number': id_number,
-                'session_token': token  # Assuming session token or similar is needed
+                'serial_number': '223344433'
+            }
+
+            headers = {
+                'Authorization': f"Bearer {token}",
+                "Content-Type": "application/json"
             }
 
             try:
-                response = client.service.GetDataByIdCard(**input_payload)
-                response_dict = serialize_object(response)
+                response = requests.post(IPRS_REST, headers=headers, json=input_payload)
+                # Get the JSON data from the response
+                response_dict = response.json()
+                print(response_dict)
 
-                if not response_dict.get('ErrorOccurred', True):
-                    print("Person's Data Retrieved Successfully in JSON Format:")
-                    print(json.dumps(response_dict, indent=4))
+                if response.status_code == 200:
+                    print(f'\nresponse status 200')
+                    print(response_dict) 
 
                     return JsonResponse(response_dict, json_dumps_params={'indent': 4})  
                 
                 else:
-                    print(f"Error: {response_dict.get('ErrorMessage', 'Unknown error')}")
+                    print(f"Requests failed: {response.status_code} - {response.text}")
                     return JsonResponse('Error', json_dumps_params={'indent': 4})
 
-            except Fault as fault:
-                print(f"SOAP Fault: {fault}")
             except Exception as e:
-                print(f"An Exception other than Fault occurred: {e}")
-                return HttpResponse(f"Passport ID {passport_id} submitted successfully!")
+                print(f"An Exception occurred: {e}")
+                return HttpResponse(f"Some error occured: {e}")
 
 
-
-
-        # Process each form independently
         if passport_id:
+
+
+                    # Logic to verify user credentials (api check)
+            def perform_login():
+
+                # Input payload
+                login_payload = {
+                    'Username': 'testhealthit',
+                    'Password': 'T3st@987654321',
+                }
+
+
+                try:
+                    BASE_URL = 'https://ovc.childprotection.uonbi.ac.ke/api/'
+                    AUTH_URL = f'{BASE_URL}/token/'
+                    # login credentials
+                    response = requests.post(AUTH_URL, data=login_payload)
+
+                    if response.status_code == 200:
+                        print(f'\nAuth response status 200: {response.json()}')
+                        token = response.json().get('access')
+                        response_dict = response.json()  # Parse the JSON response
+                        
+                        
+                        if token:
+                            return token
+                        else: 
+                            raise Exception("Not found")
+                    else:
+                        raise Exception(f"authentication failed: {response.status_code} - {response.text}")
+
+                except:
+                    return f"authentication failed: {response.status_code} - {response.text}"
+            
+
+
             session_token = request.session.get('session_token', None)
-            jsondata = get_data_by_id(client, session_token, fakedata=True)
+            token = perform_login()
+            jsondata = get_data_by_id(session_token, fakedata=False)
 
             return jsondata
         
