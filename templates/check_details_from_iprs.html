@@ -127,7 +127,7 @@
                                 type: 'POST',
                                 url: '{% url "passport_page" %}',
                                 data: {
-                                    'passport_id': id_number,  // Data to send in POST
+                                    'id_number': id_number,  // Data to send in POST
                                     'csrfmiddlewaretoken': '{{ csrf_token }}'  // Ensure CSRF token is included
                                 },
                                 success: function(response) {

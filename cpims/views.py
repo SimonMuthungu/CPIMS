@@ -44,138 +44,104 @@ def public_dashboard_reg(request):
         raise e
     
 
+# Helper function to perform login and retrieve token
+def perform_login(username, password):
+    # Input payload
+    # login_payload = {
+    #     'username': 'testhealthit',
+    #     'password': 'T3st@987654321',
+    # }
+
+    login_payload = {
+        'username': username,
+        'password': password,
+    }
+    
+    BASE_URL = 'https://ovc.childprotection.uonbi.ac.ke/api/'
+    AUTH_URL = f'{BASE_URL}/token/'
+    
+    try:
+        response = requests.post(AUTH_URL, data=login_payload)
+        
+        if response.status_code == 200:
+            print(f'\nAuth response status 200: {response.json()}')
+            token = response.json().get('access')
+            
+            if token:
+                return token
+            else:
+                raise Exception("Token not found")
+        else:
+            raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+    
+    except Exception as e:
+        print(f"Error during authentication: {e}")
+        return None
+
+
+# View function to verify user by IPRS
 def verify_user_by_iprs(request):
     if request.method == 'POST':
         username = request.POST.get('search_name')
         password = request.POST.get('search_criteria')
-
-        # WSDL service URL
-        BASE_URL = 'https://ovc.childprotection.uonbi.ac.ke/api/'
-        IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/token/iprs/1/'
-        AUTH_URL = f'{BASE_URL}/token/'
-
         
-        # Logic to verify user credentials (api check)
-        def perform_login():
+        token = perform_login(username, password)  # Use the helper function for login
+        
+        
+        if token:
+            request.session['auth_token'] = token
+            return redirect('passport_page')
+        else:
+            return JsonResponse({'error': 'Authentication failed'}, status=401)
 
-            # Input payload
-            login_payload = {
-                'username': 'testhealthit',
-                'password': 'T3st@987654321',
-            }
-
-
-            try:
-                # login credentials
-                response = requests.post(AUTH_URL, data=login_payload)
-
-                if response.status_code == 200:
-                    print(f'\nAuth response status 200: {response.json()}')
-                    token = response.json().get('access')                    
-                    
-                    if token:
-                        return token
-                    else: 
-                        raise Exception("Not found")
-                else:
-                    raise Exception(f"authentication failed: {response.status_code} - {response.text}")
-
-            except:
-                print(f"authentication failed: {response.status_code} - {response.text}")
-                return None
-            
-        perform_login()
- 
-    return render(request, 'verify_user.html') 
-
-    # return render(request, 'verify_user.html')
+    return render(request, 'verify_user.html')
 
 
+# View function for passport page
 def passport_page(request):
     if request.method == 'POST':
-        passport_id = request.POST.get('passport_id', '')
+        # passport_id = request.POST.get('passport_id', '')
         id_number = request.POST.get('id_number', '')
-        # birth_certificate = request.POST.get('birth_certificate', '')
-        # birth_certificate_serial = request.POST.get('birth_certificate_serial', '')
-
-
-        # WSDL service URL
+        print(f'Idno: {id_number}') 
+        
+        # REST URL
         IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/iprs/2/'
-
-        def get_data_by_id(token):
-
+        
+        # Function to get data by ID using the token
+        def get_data_by_id(id_number, token):
             input_payload = {
                 'id_number': id_number,
-                'serial_number': ' '
+                'serial_number': ' ',
             }
-
+            
             headers = {
                 'Authorization': f"Bearer {token}",
                 "Content-Type": "application/json"
             }
-
+            
             try:
                 response = requests.get(IPRS_REST, headers=headers, json=input_payload)
-                # Get the JSON data from the response
                 response_dict = response.json()
-                print(response_dict)
-
-                if response.status_code == 200:
-                    print(f'\nresponse status 200')
-                    print(response_dict) 
-
-                    return JsonResponse(response_dict, json_dumps_params={'indent': 4}, safe=False)  
                 
+                if response.status_code == 200:
+                    print(f'\nResponse status 200')
+                    return JsonResponse(response_dict, json_dumps_params={'indent': 4}, safe=False)
                 else:
-                    print(f"Requests failed: {response.status_code} - {response.text}")
-                    return JsonResponse('Error', json_dumps_params={'indent': 4}, safe=False)
-
+                    print(f"Request failed: {response.status_code} - {response.text}")
+                    return JsonResponse({'error': 'Request failed'}, status=400)
+            
             except Exception as e:
                 print(f"An Exception occurred: {e}")
-                return HttpResponse(f"Some error occured: {e}")
-
-
-        if passport_id:
-
-            # Logic to verify user credentials (api check)
-            def perform_login():
-
-                # Input payload
-                login_payload = {
-                    'username': 'testhealthit',
-                    'password': 'T3st@987654321',
-                }
-
-
-                try:
-                    BASE_URL = 'https://ovc.childprotection.uonbi.ac.ke/api/'
-                    AUTH_URL = f'{BASE_URL}/token/'
-                    # login credentials
-                    response = requests.post(AUTH_URL, data=login_payload)
-
-                    if response.status_code == 200:
-                        print(f'\nAuth response status 200: {response.json()}')
-                        token = response.json().get('access')   
-                        print(f'got token\n: {token}')                     
-                        
-                        if token:
-                            return token
-                        else: 
-                            raise Exception("Not found")
-                    else:
-                        raise Exception(f"authentication failed: {response.status_code} - {response.text}")
-
-                except:
-                    print(f"authentication failed: {response.status_code} - {response.text}")
-                    return None
-            
-
-
-            token = perform_login()
-            jsondata = get_data_by_id(token) 
-
-            return jsondata
+                return HttpResponse(f"Some error occurred: {e}")
         
+        if id_number:
+            token = request.session.get('auth_token')
+ 
+            if token:
+                jsondata = get_data_by_id(id_number, token)
+                return jsondata
+            else:
+                return JsonResponse({'error': 'Authentication failed'}, status=401)
         else:
             return HttpResponse("No data submitted.")
     
