@@ -148,49 +148,49 @@ def passport_page(request):
         try:
             client = check_wsdl_connection()
         except Exception as e:
-            print('Exception occured while trying to create client')
+            print(f'Exception occured while trying to create client:\n{e}')
             raise ImportWarning
+        
+
+        def get_data_by_id(client, token, fakedata=True):
+                    
+            if fakedata:
+                return JsonResponse({'response_dict': 'data 1'}, json_dumps_params={'indent': 4}) 
+
+            input_payload = {
+                'id_number': id_number,
+                'session_token': token  # Assuming session token or similar is needed
+            }
+
+            try:
+                response = client.service.GetDataByIdCard(**input_payload)
+                response_dict = serialize_object(response)
+
+                if not response_dict.get('ErrorOccurred', True):
+                    print("Person's Data Retrieved Successfully in JSON Format:")
+                    print(json.dumps(response_dict, indent=4))
+
+                    return JsonResponse(response_dict, json_dumps_params={'indent': 4})  
+                
+                else:
+                    print(f"Error: {response_dict.get('ErrorMessage', 'Unknown error')}")
+                    return JsonResponse('Error', json_dumps_params={'indent': 4})
+
+            except Fault as fault:
+                print(f"SOAP Fault: {fault}")
+            except Exception as e:
+                print(f"An Exception other than Fault occurred: {e}")
+                return HttpResponse(f"Passport ID {passport_id} submitted successfully!")
 
 
 
 
         # Process each form independently
         if passport_id:
-            def get_data_by_id(client, token):
-
-                    input_payload = {
-                        'id_number': id_number,
-                        'session_token': token  # Assuming session token or similar is needed
-                    }
-
-                    try:
-                        response = client.service.GetDataByIdCard(**input_payload)
-                        response_dict = serialize_object(response)
-
-                        if not response_dict.get('ErrorOccurred', True):
-                            print("Person's Data Retrieved Successfully in JSON Format:")
-                            print(json.dumps(response_dict, indent=4))
-
-                            return JsonResponse(response_dict, json_dumps_params={'indent': 4})  
-                        
-                        else:
-                            print(f"Error: {response_dict.get('ErrorMessage', 'Unknown error')}")
-                            return JsonResponse('Error', json_dumps_params={'indent': 4})
-
-                    except Fault as fault:
-                        print(f"SOAP Fault: {fault}")
-                    except Exception as e:
-                        print(f"An Exception other than Fault occurred: {e}")
-                        return HttpResponse(f"Passport ID {passport_id} submitted successfully!")
-                    
             session_token = request.session.get('session_token', None)
-            get_data_by_id(client, session_token)
-                        
-        # elif id_number:
-        #     return HttpResponse(f"ID Number {id_number} submitted successfully!")
-        
-        # elif birth_certificate and birth_certificate_serial:
-        #     return HttpResponse(f"Birth Certificate {birth_certificate} with Serial {birth_certificate_serial} submitted successfully!")
+            jsondata = get_data_by_id(client, session_token, fakedata=True)
+
+            return jsondata
         
         else:
             return HttpResponse("No data submitted.")
