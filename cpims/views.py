@@ -2,8 +2,8 @@
 import memcache
 import sys
 from datetime import datetime, timedelta
-from django.shortcuts import render
-from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponse
 from cpovc_registry.functions import dashboard, ovc_dashboard, get_public_dash_ovc_hiv_status, \
     get_ovc_hiv_status, fetch_locality_data, fetch_total_ovc_ever, fetch_total_ovc_ever_exited, \
     fetch_total_wout_bcert_at_enrol, get_cbo_list, get_ever_tested_for_HIV, _get_ovc_active_hiv_status, \
@@ -13,6 +13,8 @@ from cpovc_registry.functions import dashboard, ovc_dashboard, get_public_dash_o
 from cpovc_main.functions import get_dict
 from cpovc_access.functions import access_request
 from django.contrib.auth.decorators import login_required
+from zeep.helpers import serialize_object
+
 
 mc = memcache.Client(['127.0.0.1:11211'], debug=0)
 
@@ -40,8 +42,161 @@ def public_dashboard_reg(request):
         raise e
     
 
-def api_test_page(request):
-    return render(request, 'api_input.html')
+def verify_user_by_iprs(request):
+    if request.method == 'POST':
+        username = request.POST.get('search_name')
+        password = request.POST.get('search_criteria')
+
+        print(f'\nusername submitter for login:{username}\nAnd pswd: {password}')
+
+        import json
+        from zeep import Client
+        from zeep.exceptions import Fault
+        from zeep.helpers import serialize_object
+
+        # WSDL service URL
+        wsdl_url = 'https://dev.cpims.net/IPRSServerwcf?wsdl'
+
+
+        def check_wsdl_connection():
+
+            try:
+                client = Client(wsdl=wsdl_url)
+                print("Connection to WSDL service successful!")
+                return client
+            except Exception as e:
+                print(f"Failed to connect to WSDL service: {e}")
+                # return None
+            
+        try:
+            client = check_wsdl_connection()
+        except Exception as e:
+            print('Exception occured while trying to create client')
+            raise ImportWarning
+        
+        # Logic to verify user credentials (api check)
+        def perform_login(client):
+
+            from zeep.exceptions import Fault
+
+
+            # Create login payload
+            login_payload = {
+                'log': username,
+                'pass': password
+            }
+
+            try:
+                # login credentials
+                response = client.service.Login(**login_payload)  # Modify the method name as per actual WSDL
+                print(f'Im likely the culprit, heres what I am: {response}')
+                response_dict = serialize_object(response)
+
+                if response_dict.get('LoginSuccess', False):
+                    print("Login successful!")
+
+                    # creating a session with the returned token
+                    session_token = response_dict.get('SessionToken')
+                    request.session['session_token'] = session_token
+
+                    return redirect('passport_page')
+                else:
+                    print("Invalid credentials, please try again.")
+                    return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+
+            except Fault as fault:
+                print(f"SOAP Fault during login: {fault}")
+                return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+            
+        perform_login(client)
+ 
+    return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+
+    # return render(request, 'verify_user.html')
+
+
+def passport_page(request):
+    if request.method == 'POST':
+        passport_id = request.POST.get('passport_id', '')
+        id_number = request.POST.get('id_number', '')
+        birth_certificate = request.POST.get('birth_certificate', '')
+        birth_certificate_serial = request.POST.get('birth_certificate_serial', '')
+
+        import json
+        from zeep import Client
+        from zeep.exceptions import Fault
+        from zeep.helpers import serialize_object
+
+        # WSDL service URL
+        wsdl_url = 'https://dev.cpims.net/IPRSServerwcf?wsdl'
+
+
+        def check_wsdl_connection():
+
+            try:
+                client = Client(wsdl=wsdl_url)
+                print("Connection to WSDL service successful!")
+                return client
+            except Exception as e:
+                print(f"Failed to connect to WSDL service: {e}")
+                return None
+            
+        try:
+            client = check_wsdl_connection()
+        except Exception as e:
+            print('Exception occured while trying to create client')
+            raise ImportWarning
+
+
+
+
+        # Process each form independently
+        if passport_id:
+            def get_data_by_id(client, token):
+
+                    input_payload = {
+                        'id_number': id_number,
+                        'session_token': token  # Assuming session token or similar is needed
+                    }
+
+                    try:
+                        response = client.service.GetDataByIdCard(**input_payload)
+                        response_dict = serialize_object(response)
+
+                        if not response_dict.get('ErrorOccurred', True):
+                            print("Person's Data Retrieved Successfully in JSON Format:")
+                            print(json.dumps(response_dict, indent=4))
+
+                            return JsonResponse(response_dict, json_dumps_params={'indent': 4})  
+                        
+                        else:
+                            print(f"Error: {response_dict.get('ErrorMessage', 'Unknown error')}")
+                            return JsonResponse('Error', json_dumps_params={'indent': 4})
+
+                    except Fault as fault:
+                        print(f"SOAP Fault: {fault}")
+                    except Exception as e:
+                        print(f"An Exception other than Fault occurred: {e}")
+                        return HttpResponse(f"Passport ID {passport_id} submitted successfully!")
+                    
+            session_token = request.session.get('session_token', None)
+            get_data_by_id(client, session_token)
+                        
+        # elif id_number:
+        #     return HttpResponse(f"ID Number {id_number} submitted successfully!")
+        
+        # elif birth_certificate and birth_certificate_serial:
+        #     return HttpResponse(f"Birth Certificate {birth_certificate} with Serial {birth_certificate_serial} submitted successfully!")
+        
+        else:
+            return HttpResponse("No data submitted.")
+    
+    # Render the form if the method is GET or no data was submitted
+    return render(request, 'check_details_from_iprs.html')
 
 
 def public_dashboard_hivstat(request):

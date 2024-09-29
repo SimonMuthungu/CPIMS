@@ -19,7 +19,7 @@
 {% endblock javascript_code%}
 
 {% block primary %}
-<h1 class="page-header">Forms <small>Search Passport Id</small></h1>
+<h1 class="page-header">Forms <small>IPRS Database Search</small></h1>
 
 {% if messages %}
     {% for message in messages %}
@@ -73,80 +73,51 @@
                             <a href="javascript:;" class="btn btn-xs btn-icon btn-circle btn-default" data-click="panel-expand"><i class="fa fa-expand"></i></a>
                             <a href="javascript:;" class="btn btn-xs btn-icon btn-circle btn-warning" data-click="panel-collapse"><i class="fa fa-minus"></i></a>
                     </div>                          
-                    <h4 class="panel-title"><b>Search Passport</b></h4>
+                    <h4 class="panel-title"><b>Search IPRS Database</b></h4>
                 </div>
                 <div class="panel-body">
-                    <form id="verification-form" class="form-inline" data-parsley-validate="true">
+
+                    <!-- Form for Passport -->
+                    <form method="POST" action="{% url 'passport_page' %}">
                         {% csrf_token %}
                         <div class="form-group">
-                            <label for="search_name">Username:</label>
-                            <input type="text" id="search_name" name="search_name" class="form-control" placeholder="Enter search name" required>
+                            <label for="passport_id">Passport ID:</label>
+                            <input type="text" id="passport_id" name="passport_id" class="form-control">
                         </div>
-                        <div class="form-group">
-                            <label for="search_criteria">Password:</label>
-                            <input type="password" id="search_criteria" name="search_criteria" class="form-control" placeholder="Enter password" required>
-                        </div>
-                        <button id="submit-btn" type="submit" class="btn btn-primary">Submit</button>
-                        
-                        <!-- Hidden button that will be shown after successful verification -->
-                        <input id="extra-submit" type="text" class="form-control" value="passportId" style="display:none;">
-                        <button id="extra-button" type="button" class="btn btn-success" style="display:none;">Search Passport</button>
-                        
+                        <button type="submit" class="btn btn-primary">Submit Passport</button>
                     </form>
 
-                    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Handle form submission for verification
-        $('#verification-form').on('submit', function(event) {
-            event.preventDefault();  // Prevent the default form submission
+                    <br>
 
-            var formData = $(this).serialize();  // Serialize form data
+                    <!-- Form for ID Number -->
+                    <form method="POST" action="{% url 'passport_page' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="id_number">ID Number:</label>
+                            <input type="text" id="id_number" name="id_number" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit ID Number</button>
+                    </form>
 
-            // Send the data to your Django backend via AJAX
-            $.ajax({
-                type: 'POST',
-                url: '{% url "case_record_sheet" %}',  // Your Django view URL
-                data: formData,
-                success: function(response) {
-                    // Check the response content
-                    if (!response.includes('Verification Successful')) {
-                        // Show the extra input field and button if verification is successful
-                        $('#extra-button').show();
-                        $('#extra-submit').show();
-                    } else {
-                        // Handle error cases (e.g., CSRF error, failed verification)
-                        alert('Verification failed or server error.');
-                    }
-                },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
-            });
-        });
+                    <br>
 
-        // Handle the "Search Passport" button click event
-        $('#extra-button').on('click', function() {
-            var passportId = $('#extra-submit').val();  // Get the value of the extra input field
+                    <!-- Form for Birth Certificate -->
+                    <form method="POST" action="{% url 'passport_page' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="birth_certificate">Birth Certificate:</label>
+                            <input type="text" id="birth_certificate" name="birth_certificate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="birth_certificate_serial">Birth Certificate Serial Number:</label>
+                            <input type="text" id="birth_certificate_serial" name="birth_certificate_serial" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Birth Certificate</button>
+                    </form>
 
-            // Send the passportId to the separate server via AJAX
-            $.ajax({
-                type: 'POST',
-                url: 'https://separate-server-link.com/search-passport',  // Replace with your server URL
-                data: { passportId: passportId },  // Data to be sent to the server
-                success: function(response) {
-                    alert('Passport search was successful!');  // You can handle the response here
-                },
-                error: function() {
-                    alert('An error occurred while searching for the passport.');
-                }
-            });
-        });
-    });
-</script>
+                    
+                    
 
-
-                         
                 </div>
             </div>
         </div>

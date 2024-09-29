@@ -48,8 +48,9 @@ urlpatterns = [
     path('public_dash/', views.public_dash, name='public_dash'),
     path('public_dashboard/', views.public_dashboard_reg, name='public_dashboard_reg'),
 
-    # test dashboard
-    path('apitest/', views.api_test_page, name='api_test_page'),
+    # test intergration with iprs
+    path('verify/', views.verify_user_by_iprs, name='verify_user_by_iprs'),
+    path('passport/', views.passport_page, name='passport_page'),
 
     # APIs
     path('get_locality_data/', views.get_locality_data, name='get_locality_data'),
