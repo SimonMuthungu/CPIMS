@@ -71,9 +71,7 @@ def verify_user_by_iprs(request):
 
                 if response.status_code == 200:
                     print(f'\nAuth response status 200: {response.json()}')
-                    token = response.json().get('access')
-                    response_dict = response.json()  # Parse the JSON response
-                    
+                    token = response.json().get('access')                    
                     
                     if token:
                         return token
@@ -87,7 +85,7 @@ def verify_user_by_iprs(request):
             
         perform_login()
  
-    return render(request, 'verify_user.html', {'error': 'Verification failed. Please try again.'})
+    return render(request, 'verify_user.html') 
 
     # return render(request, 'verify_user.html')
 
@@ -101,18 +99,18 @@ def passport_page(request):
 
 
         # WSDL service URL
-        IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/token/iprs/2/'
+        IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/iprs/2/'
 
         def get_data_by_id(token, fakedata=True):
 
             import json
                     
             if fakedata:
-                return JsonResponse({'response_dict': 'data 1'}, json_dumps_params={'indent': 4}) 
+                return JsonResponse({'response_dict': 'data 1'}, json_dumps_params={'indent': 4}, safe=False) 
 
             input_payload = {
                 'id_number': id_number,
-                'serial_number': '223344433'
+                'serial_number': ' '
             }
 
             headers = {
@@ -121,7 +119,7 @@ def passport_page(request):
             }
 
             try:
-                response = requests.post(IPRS_REST, headers=headers, json=input_payload)
+                response = requests.get(IPRS_REST, headers=headers, json=input_payload)
                 # Get the JSON data from the response
                 response_dict = response.json()
                 print(response_dict)
@@ -130,11 +128,11 @@ def passport_page(request):
                     print(f'\nresponse status 200')
                     print(response_dict) 
 
-                    return JsonResponse(response_dict, json_dumps_params={'indent': 4})  
+                    return JsonResponse(response_dict, json_dumps_params={'indent': 4}, safe=False)  
                 
                 else:
                     print(f"Requests failed: {response.status_code} - {response.text}")
-                    return JsonResponse('Error', json_dumps_params={'indent': 4})
+                    return JsonResponse('Error', json_dumps_params={'indent': 4}, safe=False)
 
             except Exception as e:
                 print(f"An Exception occurred: {e}")
@@ -162,9 +160,8 @@ def passport_page(request):
 
                     if response.status_code == 200:
                         print(f'\nAuth response status 200: {response.json()}')
-                        token = response.json().get('access')
-                        response_dict = response.json()  # Parse the JSON response
-                        
+                        token = response.json().get('access')   
+                        print(f'got token\n: {token}')                     
                         
                         if token:
                             return token
