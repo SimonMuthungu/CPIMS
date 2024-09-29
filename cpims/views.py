@@ -60,8 +60,8 @@ def verify_user_by_iprs(request):
 
             # Input payload
             login_payload = {
-                'Username': 'testhealthit',
-                'Password': 'T3st@987654321',
+                'username': 'testhealthit',
+                'password': 'T3st@987654321',
             }
 
 
@@ -81,7 +81,8 @@ def verify_user_by_iprs(request):
                     raise Exception(f"authentication failed: {response.status_code} - {response.text}")
 
             except:
-                return f"authentication failed: {response.status_code} - {response.text}"
+                print(f"authentication failed: {response.status_code} - {response.text}")
+                return None
             
         perform_login()
  
@@ -94,19 +95,14 @@ def passport_page(request):
     if request.method == 'POST':
         passport_id = request.POST.get('passport_id', '')
         id_number = request.POST.get('id_number', '')
-        birth_certificate = request.POST.get('birth_certificate', '')
-        birth_certificate_serial = request.POST.get('birth_certificate_serial', '')
+        # birth_certificate = request.POST.get('birth_certificate', '')
+        # birth_certificate_serial = request.POST.get('birth_certificate_serial', '')
 
 
         # WSDL service URL
         IPRS_REST = 'https://ovc.childprotection.uonbi.ac.ke/api/iprs/2/'
 
-        def get_data_by_id(token, fakedata=True):
-
-            import json
-                    
-            if fakedata:
-                return JsonResponse({'response_dict': 'data 1'}, json_dumps_params={'indent': 4}, safe=False) 
+        def get_data_by_id(token):
 
             input_payload = {
                 'id_number': id_number,
@@ -141,14 +137,13 @@ def passport_page(request):
 
         if passport_id:
 
-
-                    # Logic to verify user credentials (api check)
+            # Logic to verify user credentials (api check)
             def perform_login():
 
                 # Input payload
                 login_payload = {
-                    'Username': 'testhealthit',
-                    'Password': 'T3st@987654321',
+                    'username': 'testhealthit',
+                    'password': 'T3st@987654321',
                 }
 
 
@@ -171,13 +166,13 @@ def passport_page(request):
                         raise Exception(f"authentication failed: {response.status_code} - {response.text}")
 
                 except:
-                    return f"authentication failed: {response.status_code} - {response.text}"
+                    print(f"authentication failed: {response.status_code} - {response.text}")
+                    return None
             
 
 
-            session_token = request.session.get('session_token', None)
             token = perform_login()
-            jsondata = get_data_by_id(session_token, fakedata=False)
+            jsondata = get_data_by_id(token) 
 
             return jsondata
         
